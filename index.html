@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="bn" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Infinity Work Submit</title>
+    
+    <!-- Telegram WebApp Script (Must be first) -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    
+    <script>
+        tailwind.config = {
+            darkMode: 'class', 
+            theme: {
+                extend: {
+                    colors: {
+                        darkBg: '#0f172a',
+                        darkCard: '#1e293b',
+                        lightBg: '#f3f4f6',
+                        lightCard: '#ffffff'
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Hind Siliguri', sans-serif;
+            margin: 0; padding: 0;
+            -webkit-tap-highlight-color: transparent;
+            transition: background-color 0.3s, color 0.3s;
+            user-select: none; /* Prevent text selection for app-like feel */
+        }
+        ::-webkit-scrollbar { width: 0px; background: transparent; }
+        .progress-ring__circle {
+            transition: stroke-dashoffset 0.35s;
+            transform: rotate(-90deg); transform-origin: 50% 50%;
+        }
+        .custom-select {
+            appearance: none;
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+            background-repeat: no-repeat; background-position: right 0.5rem center; background-size: 1em;
+        }
+        @keyframes popIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        .popup-anim { animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+    </style>
+</head>
+<body class="bg-lightBg text-gray-900 dark:bg-darkBg dark:text-white">
+
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+        
+        // Supabase Config
+        const supabase = window.supabase.createClient('https://jmnndvfepbuomprtwdsl.supabase.co', 'sb_publishable_rYvGNp6Hve-pEgOKwBXCZA_CPq_4_W9');
+
+        // --- COMPONENTS ---
+
+        // 1. Success Modal
+        const SuccessModal = ({ onClose }) => (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+                <div className="bg-white dark:bg-darkCard rounded-3xl p-6 w-full max-w-xs text-center shadow-2xl popup-anim relative overflow-hidden">
+                    <div className="absolute top-0 left-0 w-full h-2 bg-green-500"></div>
+                    <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <i className="fa-solid fa-check text-4xl text-green-500"></i>
+                    </div>
+                    <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-2">সফল হয়েছে!</h2>
+                    <p className="text-gray-500 dark:text-gray-300 mb-6 text-sm">আপনার কাজ সফলভাবে সাবমিট হয়েছে।</p>
+                    <button onClick={onClose} className="w-full bg-green-500 text-white font-bold py-3 rounded-xl shadow-lg shadow-green-200 active:scale-95 transition">
+                        ঠিক আছে
+                    </button>
+                </div>
+            </div>
+        );
+
+        // 2. Loading Screen
+        const LoadingScreen = ({ onComplete }) => {
+            const [progress, setProgress] = useState(0);
+            useEffect(() => {
+                const interval = setInterval(() => {
+                    setProgress((old) => {
+                        if (old >= 100) { clearInterval(interval); setTimeout(onComplete, 400); return 100; }
+                        return Math.min(old + Math.random() * 15, 100);
+                    });
+                }, 150);
+                return () => clearInterval(interval);
+            }, [onComplete]);
+
+            const radius = 60; const stroke = 8; const normalizedRadius = radius - stroke * 2; const circumference = normalizedRadius * 2 * Math.PI; const strokeDashoffset = circumference - (progress / 100) * circumference;
+            return (
+                <div className="bg-[#0a192f] h-screen w-full flex flex-col items-center justify-center text-white fixed top-0 left-0 z-50">
+                    <div className="relative mb-6">
+                        <svg height={radius * 2} width={radius * 2}><circle stroke="#1e3a5f" strokeWidth={stroke} fill="transparent" r={normalizedRadius} cx={radius} cy={radius} /><circle className="progress-ring__circle" stroke="#0ea5e9" strokeWidth={stroke} strokeDasharray={circumference + ' ' + circumference} style={{ strokeDashoffset }} strokeLinecap="round" fill="transparent" r={normalizedRadius} cx={radius} cy={radius} /></svg>
+                        <div className="absolute top-0 left-0 w-full h-full flex items-center justify-center"><span className="text-3xl font-bold text-[#0ea5e9]">{Math.round(progress)}%</span></div>
+                    </div>
+                    <p className="text-gray-300 animate-pulse font-medium">Loading System...</p>
+                </div>
+            );
+        };
+
+        // 3. Form Screen (The Submission Page)
+        const FormScreen = ({ service, user, onBack }) => {
+            const [file, setFile] = useState(null);
+            const [sheetContent, setSheetContent] = useState(null);
+            const [formData, setFormData] = useState({});
+            const [options, setOptions] = useState([]);
+            const [isSubmitting, setIsSubmitting] = useState(false);
+            const [showSuccess, setShowSuccess] = useState(false);
+            const fileInputRef = useRef(null);
+
+            useEffect(() => {
+                const fetchOpts = async () => { 
+                    const { data } = await supabase.from('service_options').select('*').eq('service_id', service.id); 
+                    if(data) setOptions(data); 
+                };
+                fetchOpts();
+            }, [service]);
+
+            const handleChange = (e) => setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
+            
+            const handleFileChange = (e) => { 
+                if (e.target.files.length > 0) {
+                    const selectedFile = e.target.files[0];
+                    setFile(selectedFile);
+                    const reader = new FileReader();
+                    reader.onload = (evt) => {
+                        const bstr = evt.target.result;
+                        const wb = XLSX.read(bstr, { type: 'binary' });
+                        const wsName = wb.SheetNames[0];
+                        const ws = wb.Sheets[wsName];
+                        const data = XLSX.utils.sheet_to_json(ws, { header: 1 });
+                        setSheetContent(data);
+                    };
+                    reader.readAsBinaryString(selectedFile);
+                }
+            };
+
+            const handleSubmit = async () => {
+                if(!file) return alert("Please upload a file");
+                if(!sheetContent) return alert("Processing file, please wait...");
+                
+                setIsSubmitting(true);
+                try {
+                    // Unique Filename: UserID_Time_OriginalName
+                    const fileName = `${user.id}_${Date.now()}_${file.name.replace(/\s+/g, '_')}`;
+                    const { error: upErr } = await supabase.storage.from('work_files').upload(fileName, file); 
+                    if(upErr) throw upErr;
+                    
+                    const { data: { publicUrl } } = supabase.storage.from('work_files').getPublicUrl(fileName);
+                    
+                    const submissionData = { 
+                        user_id: user.id.toString(), 
+                        username: user.username || "No Username", 
+                        service_name: service.name, 
+                        file_name: file.name, 
+                        file_url: publicUrl, 
+                        form_data: { ...formData, sheet_content: sheetContent }
+                    };
+                    
+                    const { error } = await supabase.from('submissions').insert([submissionData]); 
+                    if(error) throw error;
+                    
+                    setShowSuccess(true);
+                } catch (e) { 
+                    alert("Error: " + e.message); 
+                } finally { 
+                    setIsSubmitting(false); 
+                }
+            };
+
+            const getOpts = (cat) => options.filter(o => o.category_name === cat);
+
+            // Logic for Displaying User Info (Fix applied here)
+            const displayUsername = user.username ? `@${user.username}` : "No Username";
+            const displayUserId = user.id ? user.id.toString() : "Detecting...";
+
+            return (
+                <div className="min-h-screen bg-lightBg dark:bg-darkBg pb-10">
+                    {showSuccess && <SuccessModal onClose={() => { setShowSuccess(false); window.location.reload(); }} />}
+                    
+                    <div className="p-4 flex items-center justify-between border-b border-gray-200 dark:border-gray-700 shadow-sm sticky top-0 bg-white dark:bg-darkCard z-20">
+                        <button onClick={() => { if(confirm("Back to home?")) onBack(); }} className="p-2 -ml-2"><i className="fa-solid fa-xmark text-2xl text-gray-600 dark:text-gray-300"></i></button>
+                        <span className="font-bold text-lg text-gray-800 dark:text-white truncate">Submit Work</span>
+                        <div className="w-8"></div>
+                    </div>
+
+                    <div className="p-5">
+                        <h2 className="text-center text-2xl font-bold text-blue-600 dark:text-blue-400 mb-6 mt-2">Submit {service.name}</h2>
+                        
+                        {sheetContent && (
+                            <div className="mb-6 p-3 bg-green-50 border border-green-200 rounded-lg dark:bg-green-900/20 dark:border-green-800">
+                                <div className="flex items-center gap-2 text-green-700 dark:text-green-400 font-bold mb-1">
+                                    <i className="fa-solid fa-table"></i><span>Sheet Loaded</span>
+                                </div>
+                                <p className="text-xs text-green-600 dark:text-green-300">{sheetContent.length} rows found.</p>
+                            </div>
+                        )}
+
+                        <div className="space-y-5">
+                            <div className="grid grid-cols-2 gap-4">
+                                <div><label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Account Type:</label><select name="Account Type" onChange={handleChange} className="custom-select w-full border border-gray-300 dark:border-gray-600 rounded-lg p-3 text-gray-700 dark:text-gray-200 bg-white dark:bg-darkCard"><option>--Select--</option>{getOpts('Account Type').map(o => <option key={o.id}>{o.option_value}</option>)}</select></div>
+                                <div><label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Mail Type:</label><select name="Mail Type" onChange={handleChange} className="custom-select w-full border border-gray-300 dark:border-gray-600 rounded-lg p-3 text-gray-700 dark:text-gray-200 bg-white dark:bg-darkCard"><option>--Select--</option>{getOpts('Mail Type').map(o => <option key={o.id}>{o.option_value}</option>)}</select></div>
+                            </div>
+                            
+                            <div className="grid grid-cols-3 gap-3">
+                                <div><label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-2">2FA-Cook</label><select name="2FA-Cook" onChange={handleChange} className="custom-select w-full border border-gray-300 dark:border-gray-600 rounded-lg p-3 text-sm text-gray-700 dark:text-gray-200 bg-white dark:bg-darkCard"><option>Select</option>{getOpts('2FA-Cook').map(o => <option key={o.id}>{o.option_value}</option>)}</select></div>
+                                <div><label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-2">Friends:</label><select name="Friends" onChange={handleChange} className="custom-select w-full border border-gray-300 dark:border-gray-600 rounded-lg p-3 text-sm text-gray-700 dark:text-gray-200 bg-white dark:bg-darkCard"><option>Select</option>{getOpts('Friends').map(o => <option key={o.id}>{o.option_value}</option>)}</select></div>
+                                <div><label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-2">Total Id:</label><input type="number" name="Total Id" placeholder="0" onChange={handleChange} className="w-full border border-gray-300 dark:border-gray-600 rounded-lg p-3 text-sm text-gray-700 dark:text-gray-200 bg-white dark:bg-darkCard"/></div>
+                            </div>
+
+                            {/* AUTO FILLED SECTION - FIXED */}
+                            <div className="bg-gray-100 dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700">
+                                <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Telegram Info (Locked)</h3>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">Username:</label>
+                                        <input type="text" value={displayUsername} readOnly disabled className="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg p-2 text-gray-600 dark:text-gray-300 text-sm font-mono opacity-80 cursor-not-allowed"/>
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">User ID:</label>
+                                        <input type="text" value={displayUserId} readOnly disabled className="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg p-2 text-gray-600 dark:text-gray-300 text-sm font-mono opacity-80 cursor-not-allowed"/>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">File Upload (Excel):</label>
+                                <div onClick={() => fileInputRef.current.click()} className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-8 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-blue-50 dark:hover:bg-gray-800 bg-white dark:bg-darkCard transition-colors">
+                                    <div className="bg-green-600 text-white rounded-full w-14 h-14 flex items-center justify-center mb-3 text-2xl shadow-lg"><i className="fa-solid fa-file-excel"></i></div>
+                                    {file ? <p className="font-bold text-green-600 text-lg break-all">{file.name}</p> : <><p className="font-semibold text-gray-800 dark:text-gray-200 text-lg">Select Excel File</p><p className="text-sm text-gray-500 dark:text-gray-400 mt-1">.xlsx or .xls</p></>}
+                                    <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept=".xlsx, .xls" />
+                                </div>
+                            </div>
+
+                            <div className="pt-2">
+                                <button onClick={handleSubmit} disabled={isSubmitting} className="w-full h-14 rounded-xl bg-blue-600 text-white text-lg font-bold hover:bg-blue-700 active:scale-95 transition shadow-lg shadow-blue-200 disabled:bg-blue-400 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+                                    {isSubmitting ? <><i className="fa-solid fa-circle-notch fa-spin"></i> Processing...</> : 'Submit Work'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // 4. Dashboard Screen
+        const Dashboard = ({ user, onSelectService, toggleTheme, isDarkMode }) => {
+            const [services, setServices] = useState([]);
+            const [appSettings, setAppSettings] = useState(null);
+
+            useEffect(() => {
+                const fetch = async () => {
+                    const { data: sData } = await supabase.from('services').select('*').order('id'); if (sData) setServices(sData);
+                    const { data: setDate } = await supabase.from('settings').select('*').single(); if (setDate) setAppSettings(setDate);
+                };
+                fetch();
+            }, []);
+
+            // Initial for Avatar
+            const initial = user.first_name ? user.first_name.charAt(0).toUpperCase() : 'U';
+            const fullName = `${user.first_name || 'Guest'} ${user.last_name || ''}`.trim();
+
+            return (
+                <div className="bg-lightBg dark:bg-darkBg min-h-screen pb-6 transition-colors duration-300">
+                    <div className="bg-white dark:bg-darkCard p-4 flex justify-between items-center shadow-sm sticky top-0 z-10">
+                        <div className="flex items-center gap-2"><i className="fa-solid fa-robot text-2xl text-blue-600"></i><span className="font-bold text-lg text-black dark:text-white">Infinity Work</span></div>
+                        <i className="fa-solid fa-ellipsis-vertical text-xl text-gray-600 dark:text-gray-300"></i>
+                    </div>
+                    
+                    <div className="p-5 space-y-6">
+                        {/* PROFILE CARD - FIXED */}
+                        <div className="bg-white dark:bg-darkCard rounded-2xl p-4 flex items-center justify-between shadow-sm border border-gray-100 dark:border-gray-700">
+                            <div className="flex items-center gap-4">
+                                <div className="w-14 h-14 rounded-full overflow-hidden border-2 border-blue-500 bg-gray-200 relative">
+                                    {user.photo_url ? (
+                                        <img src={user.photo_url} alt="Profile" className="w-full h-full object-cover" onError={(e) => {e.target.style.display='none'; e.target.nextSibling.style.display='flex'}} />
+                                    ) : null}
+                                    <div className="absolute inset-0 flex items-center justify-center bg-blue-500 text-white font-bold text-xl" style={{display: user.photo_url ? 'none' : 'flex'}}>
+                                        {initial}
+                                    </div>
+                                </div>
+                                <div>
+                                    <h2 className="font-bold text-gray-800 dark:text-white text-lg leading-tight">{fullName}</h2>
+                                    <p className="text-gray-500 dark:text-gray-400 text-xs mt-1">
+                                        {user.username ? `@${user.username}` : `ID: ${user.id}`}
+                                    </p>
+                                </div>
+                            </div>
+                            <button onClick={toggleTheme} className="bg-gray-100 dark:bg-gray-700 p-3 rounded-full w-12 h-12 flex items-center justify-center transition hover:bg-gray-200 dark:hover:bg-gray-600">
+                                {isDarkMode ? <i className="fa-solid fa-sun text-xl text-yellow-400"></i> : <i className="fa-solid fa-moon text-xl text-gray-800"></i>}
+                            </button>
+                        </div>
+
+                        {/* Banner & Notice */}
+                        <div className="bg-gradient-to-r from-blue-900 to-indigo-900 rounded-3xl overflow-hidden shadow-xl relative h-48 flex items-center justify-center transform transition active:scale-95">
+                            {appSettings?.thumbnail_url && <img src={appSettings.thumbnail_url} className="absolute inset-0 w-full h-full object-cover opacity-50" />}
+                            <div className="absolute right-6 top-6 text-right z-10"><h1 className="text-white text-2xl font-bold leading-tight drop-shadow-md">কিভাবে<br/>কাজ জমা<br/>দিবেন!</h1></div>
+                            <a href={appSettings?.video_url || '#'} target="_blank" className="relative z-10 bg-white bg-opacity-20 backdrop-blur-md border border-white p-3 rounded-full shadow-lg"><i className="fa-solid fa-play text-white text-xl ml-1"></i></a>
+                        </div>
+                        
+                        <div className="bg-white dark:bg-darkCard rounded-xl shadow-sm border-l-[6px] border-red-500 p-4">
+                            <div className="flex items-center gap-2 mb-1"><i className="fa-solid fa-thumbtack text-red-500 rotate-45 text-lg"></i><h3 className="font-bold text-lg text-gray-800 dark:text-white">নোটিশ</h3></div>
+                            <p className="text-gray-600 dark:text-gray-300 text-xs leading-relaxed">{appSettings?.notice_text || 'Loading...'}</p>
+                        </div>
+
+                        {/* Services Grid */}
+                        <div className="grid grid-cols-3 gap-3 mt-2">
+                            {services.length === 0 && <p className="col-span-3 text-center text-gray-400 text-sm">Services Loading...</p>}
+                            {services.map((s) => (
+                                <div key={s.id} onClick={() => onSelectService(s)} className="bg-white dark:bg-darkCard rounded-2xl p-3 flex flex-col items-center justify-center shadow-sm hover:shadow-lg transition-all active:scale-95 cursor-pointer h-32 border border-gray-50 dark:border-gray-700">
+                                    <div className="w-12 h-12 rounded-xl flex items-center justify-center text-white text-2xl mb-2 shadow-sm" style={{ backgroundColor: s.color }}><i className={s.icon}></i></div>
+                                    <span className="text-xs font-semibold text-gray-700 dark:text-gray-200 text-center leading-tight line-clamp-2">{s.name}</span>
+                                </div>
+                            ))}
+                        </div>
+                        <div className="h-4"></div>
+                    </div>
+                </div>
+            );
+        };
+
+        // 5. Main App Component
+        const App = () => {
+            const [screen, setScreen] = useState("loading");
+            const [selectedService, setSelectedService] = useState(null);
+            const [isDarkMode, setIsDarkMode] = useState(false);
+            
+            // Default user state (Fallback for browser testing)
+            const [user, setUser] = useState({ 
+                id: "Guest", 
+                first_name: "Guest", 
+                last_name: "", 
+                username: null, 
+                photo_url: null 
+            });
+
+            // --- FIXED: TELEGRAM INITIALIZATION ---
+            useEffect(() => {
+                if (window.Telegram && window.Telegram.WebApp) {
+                    const tg = window.Telegram.WebApp;
+                    tg.ready();
+                    tg.expand(); 
+                    
+                    // Force disable vertical swiping to close
+                    if (tg.isVersionAtLeast('7.7')) tg.disableVerticalSwipes();
+
+                    // GET USER DATA IMMEDIATELY
+                    const tgUser = tg.initDataUnsafe?.user;
+                    if (tgUser) {
+                        setUser(tgUser);
+                    } else {
+                        console.log("Not running inside Telegram or User Data missing");
+                        // Optional: For testing in browser, leave the default 'Guest' or set a demo user
+                        // setUser({ id: 123456, first_name: "Test", username: "browser_user" }); 
+                    }
+
+                    // Theme handling
+                    if (tg.colorScheme === 'dark') { 
+                        setIsDarkMode(true); 
+                        document.documentElement.classList.add('dark'); 
+                    }
+                }
+            }, []);
+
+            const toggleTheme = () => {
+                setIsDarkMode(prev => {
+                    const newMode = !prev;
+                    document.documentElement.classList.toggle('dark', newMode);
+                    return newMode;
+                });
+            };
+
+            return (
+                <React.Fragment>
+                    {screen === "loading" && <LoadingScreen onComplete={() => setScreen("dashboard")} />}
+                    {screen === "dashboard" && <Dashboard user={user} onSelectService={s=>{setSelectedService(s); setScreen("form");}} toggleTheme={toggleTheme} isDarkMode={isDarkMode} />}
+                    {screen === "form" && selectedService && <FormScreen service={selectedService} user={user} onBack={()=>setScreen("dashboard")} />}
+                </React.Fragment>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+  </html>
